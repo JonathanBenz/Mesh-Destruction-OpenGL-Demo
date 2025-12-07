@@ -1,0 +1,59 @@
+#version 430 core
+
+// --- Buffers
+layout (std430, binding = 4) buffer Pos
+{
+	vec4 Positions [ ];
+};
+
+layout (std430, binding = 5) buffer Dir
+{
+	vec4 Directions [ ];
+};
+
+layout (std430, binding = 6) buffer Col 
+{
+	vec4 Colors [ ];
+};
+
+layout (std430, binding = 7) buffer Speed 
+{
+	float Speeds [ ];
+};
+
+layout (std430, binding = 8) buffer Active
+{
+    int IsActive[]; // 0 = static, 1 = moving
+};
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+uniform float deltaTime;
+uniform vec3 modelCenter;
+
+void main() 
+{
+	uint g_id = gl_GlobalInvocationID.x;
+
+	vec3 pos = Positions[g_id].xyz;
+	vec3 dir = Directions[g_id].xyz;
+	float speed = Speeds[g_id];
+
+	if (IsActive[g_id] == 0) 
+	{
+		float dist = distance(pos, modelCenter);
+		if (dist <= 0.75) IsActive[g_id] = 1; // Activate this particle permanently
+	}
+
+	// Only activated particles get to move
+	if (IsActive[g_id] == 1) 
+	{
+		vec3 G = vec3(0.0f, 9.8f, 0.0f);
+		vec3 Impulse = vec3(0.0f, 1.0f, 20.0f);
+		dir += G * Impulse * deltaTime;
+		pos += dir * speed * deltaTime;
+		Directions[g_id].xyz = dir;
+	}
+
+    Positions[g_id].xyz = pos;
+}
